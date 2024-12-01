@@ -11,7 +11,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# تعریف login_required
+# تعریف login_required: دکوراتوری که برای محافظت از مسیرهای نیازمند لاگین استفاده می‌شود
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -21,42 +21,45 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# مدل Order برای ذخیره‌سازی اطلاعات سفارش‌ها در پایگاه داده
 class Order(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    order_type = db.Column(db.String(10), nullable=False)  # 'buy' یا 'sell'
-    amount = db.Column(db.Integer, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)  # شناسه یکتای سفارش
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # شناسه کاربری که سفارش را ثبت کرده است
+    order_type = db.Column(db.String(10), nullable=False)  # نوع سفارش (خرید یا فروش)
+    amount = db.Column(db.Integer, nullable=False)  # مقدار ساتوشی مورد نظر در سفارش
     is_approved = db.Column(db.Boolean, default=False)  # وضعیت تأیید سفارش
-    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # کاربری که سفارش را تأیید کرده است
-    user = db.relationship('User', backref='orders', foreign_keys=[user_id])
-    approver = db.relationship('User', backref='approved_orders', foreign_keys=[approved_by])
+    approved_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)  # شناسه کاربری که سفارش را تأیید کرده است
+    user = db.relationship('User', backref='orders', foreign_keys=[user_id])  # ارتباط بین سفارش و کاربر ثبت‌کننده
+    approver = db.relationship('User', backref='approved_orders', foreign_keys=[approved_by])  # ارتباط بین سفارش و کاربر تأییدکننده
 
-# Database model for users
+# مدل User برای ذخیره‌سازی اطلاعات کاربران در پایگاه داده
 class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(150), unique=True, nullable=False)
-    password = db.Column(db.String(150), nullable=False)
-    name = db.Column(db.String(150), nullable=True)
-    card_number = db.Column(db.String(20), nullable=True)
-    lightning_wallet = db.Column(db.String(255), nullable=True)
-    telegram_id = db.Column(db.String(150), nullable=True)
+    id = db.Column(db.Integer, primary_key=True)  # شناسه یکتای کاربر
+    username = db.Column(db.String(150), unique=True, nullable=False)  # نام کاربری که باید یکتا باشد
+    password = db.Column(db.String(150), nullable=False)  # رمز عبور هش‌شده کاربر
+    name = db.Column(db.String(150), nullable=True)  # نام کاربر
+    card_number = db.Column(db.String(20), nullable=True)  # شماره کارت بانکی کاربر
+    lightning_wallet = db.Column(db.String(255), nullable=True)  # آدرس کیف پول لایتنینگ کاربر
+    telegram_id = db.Column(db.String(150), nullable=True)  # آیدی تلگرام کاربر
 
     def is_profile_complete(self):
-        # بررسی اینکه آیا تمام فیلدهای پروفایل پر شده‌اند
+        # بررسی اینکه آیا تمام فیلدهای پروفایل پر شده‌اند یا خیر
         return all([self.name, self.card_number, self.lightning_wallet, self.telegram_id])
 
-
+# مدل Notification برای ذخیره‌سازی اعلان‌ها در پایگاه داده
 class Notification(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    message = db.Column(db.String(500), nullable=False)
-    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
-    user = db.relationship('User', backref='notifications', lazy=True)
+    id = db.Column(db.Integer, primary_key=True)  # شناسه یکتای اعلان
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # شناسه کاربری که اعلان برای او است
+    message = db.Column(db.String(500), nullable=False)  # متن پیام اعلان
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())  # زمان ایجاد اعلان
+    user = db.relationship('User', backref='notifications', lazy=True)  # ارتباط بین اعلان و کاربر
 
+# صفحه اصلی
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# مسیر لاگین کاربران
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -71,6 +74,7 @@ def login():
             flash('نام کاربری یا رمز عبور اشتباه است', 'danger')
     return render_template('login.html')
 
+# مسیر ثبت‌نام کاربران
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -87,6 +91,7 @@ def register():
             return redirect(url_for('login'))
     return render_template('register.html')
 
+# مسیر پروفایل کاربر
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
@@ -103,30 +108,31 @@ def profile():
     
     return render_template('profile.html', user=user)
 
-
+# صفحه اصلی کاربر پس از لاگین
 @app.route('/home')
 @login_required
 def home():
     user_id = session['user_id']
     user = User.query.get_or_404(user_id)
-    orders = Order.query.all()
-    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.timestamp.desc()).all()
+    orders = Order.query.all()  # دریافت تمام سفارش‌ها
+    notifications = Notification.query.filter_by(user_id=user_id).order_by(Notification.timestamp.desc()).all()  # دریافت اعلان‌های کاربر
     return render_template('home.html', user=user, orders=orders, notifications=notifications)
 
-
+# مسیر خروج از حساب کاربری
 @app.route('/logout')
 def logout():
-    session.pop('user_id', None)  # حذف user_id از session
+    session.pop('user_id', None)  # حذف شناسه کاربر از session
     flash('با موفقیت از حساب خارج شدید', 'success')
     return redirect(url_for('login'))
 
+# مسیر ثبت سفارش جدید
 @app.route('/order', methods=['GET', 'POST'])
 @login_required
 def order():
     user_id = session['user_id']
     user = User.query.get_or_404(user_id)
 
-    # بررسی کامل بودن پروفایل
+    # بررسی کامل بودن پروفایل کاربر
     if not user.is_profile_complete():
         flash('لطفاً ابتدا پروفایل خود را تکمیل کنید.', 'warning')
         return redirect(url_for('profile'))
@@ -154,7 +160,7 @@ def order():
         return redirect(url_for('home'))
     return render_template('order.html')
 
-
+# مسیر حذف سفارش
 @app.route('/delete_order/<int:order_id>', methods=['POST'])
 @login_required
 def delete_order(order_id):
@@ -177,6 +183,7 @@ def delete_order(order_id):
     flash('سفارش با موفقیت حذف شد.', 'success')
     return redirect(url_for('home'))
 
+# مسیر تأیید سفارش
 @app.route('/approve_order/<int:order_id>', methods=['POST'])
 @login_required
 def approve_order(order_id):
@@ -220,7 +227,6 @@ def approve_order(order_id):
 
     flash('سفارش با موفقیت تأیید شد. اکنون می‌توانید پروفایل یکدیگر را مشاهده کنید.', 'success')
     return redirect(url_for('home'))
-
 
 
 @app.route('/profile/<int:user_id>')
