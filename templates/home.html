@@ -13,12 +13,12 @@
             <a href="/logout" class="btn btn-danger">خروج از حساب</a>
             <a href="/profile" class="btn btn-secondary">نمایش پروفایل</a>
             <a href="/order" class="btn btn-primary">ثبت سفارش</a>
-            <button id="showNotifications" class="btn btn-info">نمایش اعلان‌ها</button>
+            <button id="showNotifications" class="btn btn-info">نمایش تاریخچه</button>
         </div>
 
-        <!-- بخش نمایش اعلان‌ها -->
+        <!-- بخش نمایش تاریخچه -->
         <div id="notifications" class="mt-3" style="display:none;">
-            <h4>اعلان‌های شما:</h4>
+            <h4>تاریخچه شما:</h4>
             <ul class="list-group">
                 {% for notification in notifications %}
                 <li class="list-group-item">
@@ -27,7 +27,7 @@
                 </li>
                 {% endfor %}
                 {% if notifications|length == 0 %}
-                <li class="list-group-item text-center">هیچ اعلانی موجود نیست</li>
+                <li class="list-group-item text-center">هیچ رکوردی موجود نیست.</li>
                 {% endif %}
             </ul>
         </div>        
