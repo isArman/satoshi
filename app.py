@@ -10,19 +10,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'یک_کلید_پیش‌فرض_امن')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'کلید_پیش_فرض_امنیتی')  # تنظیم کلید امنیتی برنامه از متغیر محیطی
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'  # تنظیم URI پایگاه داده SQLite
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # غیرفعال کردن ردیابی تغییرات SQLAlchemy برای بهبود کارایی
 
 db = SQLAlchemy(app)
 
-# تعریف login_required: دکوراتوری که برای محافظت از مسیرهای نیازمند لاگین استفاده می‌شود
+# دکوراتوری که برای محافظت از مسیرهای نیازمند لاگین استفاده می‌شود
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            flash('ابتدا وارد حساب کاربری خود شوید', 'warning')
-            return redirect(url_for('login'))
+            flash('ابتدا وارد حساب کاربری خود شوید', 'warning')  # نمایش پیام خطا اگر کاربر وارد نشده باشد
+            return redirect(url_for('login'))  # هدایت کاربر به صفحه لاگین
         return f(*args, **kwargs)
     return decorated_function
 
@@ -73,10 +73,10 @@ def login():
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password, password):
             session['user_id'] = user.id  # ذخیره شناسه کاربر در session
-            flash('با موفقیت وارد شدید', 'success')
+            flash('با موفقیت وارد شدید', 'success')  # نمایش پیام موفقیت
             return redirect(url_for('home', user_id=user.id))
         else:
-            flash('نام کاربری یا رمز عبور اشتباه است', 'danger')
+            flash('نام کاربری یا رمز عبور اشتباه است', 'danger')  # نمایش پیام خطا در صورت اشتباه بودن اطلاعات
     return render_template('login.html')
 
 # مسیر ثبت‌نام کاربران
@@ -86,13 +86,13 @@ def register():
         username = request.form['username']
         password = request.form['password']
         if User.query.filter_by(username=username).first():
-            flash('این نام کاربری قبلاً استفاده شده است', 'warning')
+            flash('این نام کاربری قبلاً استفاده شده است', 'warning')  # نمایش پیام هشدار در صورت تکراری بودن نام کاربری
         else:
-            hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=16)
+            hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=16)  # هش کردن رمز عبور
             new_user = User(username=username, password=hashed_password)
             db.session.add(new_user)
             db.session.commit()
-            flash('حساب کاربری با موفقیت ایجاد شد', 'success')
+            flash('حساب کاربری با موفقیت ایجاد شد', 'success')  # نمایش پیام موفقیت در ثبت‌نام
             return redirect(url_for('login'))
     return render_template('register.html')
 
@@ -109,7 +109,7 @@ def profile():
         user.lightning_wallet = request.form['lightning_wallet']
         user.telegram_id = request.form['telegram_id']
         db.session.commit()
-        flash('پروفایل با موفقیت به‌روزرسانی شد', 'success')
+        flash('پروفایل با موفقیت به‌روزرسانی شد', 'success')  # نمایش پیام موفقیت در به‌روزرسانی پروفایل
     
     return render_template('profile.html', user=user)
 
@@ -127,7 +127,7 @@ def home():
 @app.route('/logout')
 def logout():
     session.pop('user_id', None)  # حذف شناسه کاربر از session
-    flash('با موفقیت از حساب خارج شدید', 'success')
+    flash('با موفقیت از حساب خارج شدید', 'success')  # نمایش پیام موفقیت در خروج از حساب
     return redirect(url_for('login'))
 
 # مسیر ثبت سفارش جدید
@@ -139,7 +139,7 @@ def order():
 
     # بررسی کامل بودن پروفایل کاربر
     if not user.is_profile_complete():
-        flash('لطفاً ابتدا پروفایل خود را تکمیل کنید.', 'warning')
+        flash('لطفاً ابتدا پروفایل خود را تکمیل کنید.', 'warning')  # نمایش پیام هشدار برای تکمیل پروفایل
         return redirect(url_for('profile'))
 
     if request.method == 'POST':
@@ -148,7 +148,7 @@ def order():
 
         # بررسی محدودیت تعداد ساتوشی
         if amount < 1000 or amount > 10000:
-            flash('تعداد ساتوشی باید بین ۱۰۰۰ تا ۱۰۰۰۰ باشد.', 'danger')
+            flash('تعداد ساتوشی باید بین ۱۰۰۰ تا ۱۰۰۰۰ باشد.', 'danger')  # نمایش پیام خطا در صورت نامعتبر بودن مقدار
             return redirect(url_for('order'))
 
         # ایجاد سفارش
@@ -161,7 +161,7 @@ def order():
         db.session.add(notification)
         db.session.commit()
 
-        flash(f'سفارش شما با موفقیت ثبت شد: نوع {order_type}، تعداد {amount} ساتوشی', 'success')
+        flash(f'سفارش شما با موفقیت ثبت شد: نوع {order_type}، تعداد {amount} ساتوشی', 'success')  # نمایش پیام موفقیت
         return redirect(url_for('home'))
     return render_template('order.html')
 
@@ -174,7 +174,7 @@ def delete_order(order_id):
 
     # بررسی اینکه آیا سفارش متعلق به کاربر فعلی است
     if order.user_id != user_id:
-        flash('شما اجازه حذف این سفارش را ندارید.', 'danger')
+        flash('شما اجازه حذف این سفارش را ندارید.', 'danger')  # نمایش پیام خطا در صورت عدم مجوز حذف
         return redirect(url_for('home'))
 
     # ایجاد گزارش حذف سفارش
@@ -185,7 +185,7 @@ def delete_order(order_id):
     # حذف سفارش
     db.session.delete(order)
     db.session.commit()
-    flash('سفارش با موفقیت حذف شد.', 'success')
+    flash('سفارش با موفقیت حذف شد.', 'success')  # نمایش پیام موفقیت در حذف سفارش
     return redirect(url_for('home'))
 
 # مسیر تأیید سفارش
@@ -198,17 +198,17 @@ def approve_order(order_id):
 
     # بررسی کامل بودن پروفایل
     if not user.is_profile_complete():
-        flash('لطفاً ابتدا پروفایل خود را تکمیل کنید.', 'warning')
+        flash('لطفاً ابتدا پروفایل خود را تکمیل کنید.', 'warning')  # نمایش پیام هشدار برای تکمیل پروفایل
         return redirect(url_for('profile'))
 
     # بررسی اینکه کاربر نمی‌تواند سفارش خود را تأیید کند
     if order.user_id == user_id:
-        flash('شما نمی‌توانید سفارش خود را تأیید کنید.', 'danger')
+        flash('شما نمی‌توانید سفارش خود را تأیید کنید.', 'danger')  # نمایش پیام خطا در صورت تلاش برای تأیید سفارش خود
         return redirect(url_for('home'))
 
     # بررسی اینکه سفارش قبلاً تأیید نشده باشد
     if order.is_approved:
-        flash('این سفارش قبلاً تأیید شده است.', 'warning')
+        flash('این سفارش قبلاً تأیید شده است.', 'warning')  # نمایش پیام هشدار در صورت تأیید شدن سفارش
         return redirect(url_for('home'))
 
     # تأیید سفارش
@@ -230,7 +230,7 @@ def approve_order(order_id):
     db.session.add(owner_notification)
     db.session.commit()
 
-    flash('سفارش با موفقیت تأیید شد. اکنون می‌توانید پروفایل یکدیگر را مشاهده کنید.', 'success')
+    flash('سفارش با موفقیت تأیید شد. اکنون می‌توانید پروفایل یکدیگر را مشاهده کنید.', 'success')  # نمایش پیام موفقیت در تأیید سفارش
     return redirect(url_for('home'))
 
 # مسیر مشاهده پروفایل کاربر
@@ -247,7 +247,7 @@ def view_profile(user_id):
     ).all()
 
     if not approved_orders:
-        flash('فقط طرفین معامله قادر به دیدن پروفایل یکدیگر هستند.', 'danger')
+        flash('فقط طرفین معامله قادر به دیدن پروفایل یکدیگر هستند.', 'danger')  # نمایش پیام خطا در صورت عدم ارتباط معتبر
         return redirect(url_for('home'))
 
     return render_template('profile.html', user=user)
@@ -255,4 +255,4 @@ def view_profile(user_id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # ایجاد جداول دیتابیس
-    app.run(debug=True)
+    app.run(debug=True)  # اجرای برنامه در حالت دیباگ
