@@ -3,9 +3,14 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import session
 from functools import wraps
+import os
+from dotenv import load_dotenv
+
+# بارگذاری متغیرهای محیطی از فایل .env
+load_dotenv()
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'یک_کلید_پیش‌فرض_امن')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
@@ -228,7 +233,7 @@ def approve_order(order_id):
     flash('سفارش با موفقیت تأیید شد. اکنون می‌توانید پروفایل یکدیگر را مشاهده کنید.', 'success')
     return redirect(url_for('home'))
 
-
+# مسیر مشاهده پروفایل کاربر
 @app.route('/profile/<int:user_id>')
 @login_required
 def view_profile(user_id):
@@ -246,8 +251,6 @@ def view_profile(user_id):
         return redirect(url_for('home'))
 
     return render_template('profile.html', user=user)
-
-
 
 if __name__ == '__main__':
     with app.app_context():
