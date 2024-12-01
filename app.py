@@ -45,11 +45,11 @@ class User(db.Model):
     name = db.Column(db.String(150), nullable=True)  # نام کاربر
     card_number = db.Column(db.String(20), nullable=True)  # شماره کارت بانکی کاربر
     lightning_wallet = db.Column(db.String(255), nullable=True)  # آدرس کیف پول لایتنینگ کاربر
-    telegram_id = db.Column(db.String(150), nullable=True)  # آیدی تلگرام کاربر
+    # telegram_id = db.Column(db.String(150), nullable=True)  # آیدی تلگرام کاربر
 
     def is_profile_complete(self):
         # بررسی اینکه آیا تمام فیلدهای پروفایل پر شده‌اند یا خیر
-        return all([self.name, self.card_number, self.lightning_wallet, self.telegram_id])
+        return all([self.name, self.card_number, self.lightning_wallet])
 
 # مدل Notification برای ذخیره‌سازی اعلان‌ها در پایگاه داده
 class Notification(db.Model):
@@ -58,6 +58,16 @@ class Notification(db.Model):
     message = db.Column(db.String(500), nullable=False)  # متن پیام اعلان
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())  # زمان ایجاد اعلان
     user = db.relationship('User', backref='notifications', lazy=True)  # ارتباط بین اعلان و کاربر
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.String(1000), nullable=False)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+    
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
+    receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_messages')
 
 # صفحه اصلی
 @app.route('/')
@@ -80,20 +90,27 @@ def login():
     return render_template('login.html')
 
 # مسیر ثبت‌نام کاربران
+# مسیر ثبت‌نام کاربران
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if User.query.filter_by(username=username).first():
+
+        # بررسی تکراری بودن نام کاربری
+        existing_user = User.query.filter_by(username=username).first()
+        if existing_user:
             flash('این نام کاربری قبلاً استفاده شده است', 'warning')  # نمایش پیام هشدار در صورت تکراری بودن نام کاربری
-        else:
-            hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=16)  # هش کردن رمز عبور
-            new_user = User(username=username, password=hashed_password)
-            db.session.add(new_user)
-            db.session.commit()
-            flash('حساب کاربری با موفقیت ایجاد شد', 'success')  # نمایش پیام موفقیت در ثبت‌نام
-            return redirect(url_for('login'))
+            return render_template('register.html')  # بازگرداندن کاربر به فرم ثبت‌نام برای تصحیح اطلاعات
+
+        # اگر نام کاربری تکراری نبود، ادامه فرآیند ثبت‌نام
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256', salt_length=16)  # هش کردن رمز عبور
+        new_user = User(username=username, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        flash('حساب کاربری با موفقیت ایجاد شد', 'success')  # نمایش پیام موفقیت در ثبت‌نام
+        return redirect(url_for('login'))
+        
     return render_template('register.html')
 
 # مسیر پروفایل کاربر
@@ -107,7 +124,7 @@ def profile():
         user.name = request.form['name']
         user.card_number = request.form['card_number']
         user.lightning_wallet = request.form['lightning_wallet']
-        user.telegram_id = request.form['telegram_id']
+        # user.telegram_id = request.form['telegram_id']
         db.session.commit()
         flash('پروفایل با موفقیت به‌روزرسانی شد', 'success')  # نمایش پیام موفقیت در به‌روزرسانی پروفایل
     
@@ -251,6 +268,39 @@ def view_profile(user_id):
         return redirect(url_for('home'))
 
     return render_template('profile.html', user=user)
+
+@app.route('/chat/<int:user_id>', methods=['GET', 'POST'])
+@login_required
+def chat(user_id):
+    current_user_id = session['user_id']
+    other_user = User.query.get_or_404(user_id)
+
+    # بررسی اینکه ارتباط چت فقط برای کاربرانی است که سفارش تایید شده بین آن‌ها وجود دارد
+    approved_orders = Order.query.filter(
+        ((Order.user_id == current_user_id) & (Order.approved_by == user_id) & (Order.is_approved == True)) |
+        ((Order.user_id == user_id) & (Order.approved_by == current_user_id) & (Order.is_approved == True))
+    ).all()
+
+    if not approved_orders:
+        flash('شما مجاز به چت با این کاربر نیستید.', 'danger')
+        return redirect(url_for('home'))
+
+    if request.method == 'POST':
+        message_content = request.form['content']
+        if message_content:
+            new_message = Message(sender_id=current_user_id, receiver_id=user_id, content=message_content)
+            db.session.add(new_message)
+            db.session.commit()
+            flash('پیام شما با موفقیت ارسال شد.', 'success')
+        return redirect(url_for('chat', user_id=user_id))
+
+    # دریافت پیام‌های بین دو کاربر
+    messages = Message.query.filter(
+        ((Message.sender_id == current_user_id) & (Message.receiver_id == user_id)) |
+        ((Message.sender_id == user_id) & (Message.receiver_id == current_user_id))
+    ).order_by(Message.timestamp.asc()).all()
+
+    return render_template('chat.html', messages=messages, other_user=other_user)
 
 if __name__ == '__main__':
     with app.app_context():

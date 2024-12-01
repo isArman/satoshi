@@ -63,9 +63,11 @@
                         {% elif order.is_approved and order.user.id == user.id %}
                         <!-- نمایش لینک پروفایل تاییدکننده برای ثبت‌کننده سفارش -->
                         <a href="/profile/{{ order.approved_by }}" class="btn btn-info btn-sm">مشاهده پروفایل تاییدکننده</a>
+                        <a href="/chat/{{ order.approved_by }}" class="btn btn-warning btn-sm">چت با تاییدکننده</a>
                         {% elif order.is_approved and order.approved_by == user.id %}
                         <!-- نمایش لینک پروفایل ثبت‌کننده برای تاییدکننده -->
                         <a href="/profile/{{ order.user.id }}" class="btn btn-info btn-sm">مشاهده پروفایل ثبت‌کننده</a>
+                        <a href="/chat/{{ order.user.id }}" class="btn btn-warning btn-sm">چت با ثبت‌کننده</a>
                         {% elif order.is_approved %}
                         <!-- نمایش پیام برای سایر کاربران -->
                         <span class="text-success">تأیید شده توسط {{ order.approver.username }}</span>

@@ -25,10 +25,6 @@
                 <label for="lightning_wallet" class="form-label">آدرس کیف پول لایتنینگ</label>
                 <input type="text" class="form-control" id="lightning_wallet" name="lightning_wallet" value="{{ user.lightning_wallet }}" required>
             </div>
-            <div class="mb-3">
-                <label for="telegram_id" class="form-label">آیدی تلگرام</label>
-                <input type="text" class="form-control" id="telegram_id" name="telegram_id" value="{{ user.telegram_id }}" required>
-            </div>
             <button type="submit" class="btn btn-primary">ذخیره تغییرات</button>
         </form>
         {% else %}
@@ -37,7 +33,6 @@
             <li class="list-group-item"><strong>نام:</strong> {{ user.name or 'ثبت نشده' }}</li>
             <li class="list-group-item"><strong>شماره کارت:</strong> {{ user.card_number or 'ثبت نشده' }}</li>
             <li class="list-group-item"><strong>آدرس کیف پول لایتنینگ:</strong> {{ user.lightning_wallet or 'ثبت نشده' }}</li>
-            <li class="list-group-item"><strong>آیدی تلگرام:</strong> {{ user.telegram_id or 'ثبت نشده' }}</li>
         </ul>
         {% endif %}
 
